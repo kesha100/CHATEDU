@@ -1,0 +1,177 @@
+Index: isomorphic-starter-template/src/layouts/hydrogen/sidebar.tsx
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.BaseRevisionTextPatchEP
+<+>\"use client\";\n\nimport Link from \"next/link\";\nimport {Fragment, useEffect, useState} from \"react\";\nimport {usePathname,useRouter } from \"next/navigation\";\n// import {useRouter} from 'next/router'\nimport { Title, Collapse } from \"rizzui\";\nimport { cn } from \"@/utils/class-names\";\nimport { PiCaretDownBold } from \"react-icons/pi\";\nimport SimpleBar from \"@/components/ui/simplebar\";\nimport Image from \"next/image\";\nimport Logo from \"../../../public/imgLogotwo.png\"\nimport { signOut } from \"next-auth/react\";\nimport {\n  PiBriefcaseDuotone,\n  PiFolderUserDuotone,\n  PiSignOutBold\n} from 'react-icons/pi';\nimport axios from \"axios\";\n\ninterface MenuItem {\n  name: string;\n  href?: string;\n  icon?: JSX.Element;\n  dropdownItems?: MenuItem[];\n  onClick?: () => void;\n}\n\ninterface SurvayPropm{\n  survay_id: number,\n  name: string\n}\n\n\nexport default function Sidebar(\n    {\n      className,\n      locale\n    }: {\n      className?: string;\n      locale?:string\n    })\n{\n  const [authenticated, setAuthenticated] = useState<boolean | null>(null);\n  const [survayData, setSurvayData] = useState<SurvayPropm[]>([])\n\n  useEffect(() => {\n    const fetchAuthenticationStatus = async () => {\n      try {\n        const response = await fetch('http://localhost:3000/api');\n        const data = await response.json();\n        setAuthenticated(data.authenticated);\n      } catch (error) {\n        console.error('Error fetching authentication status:', error);\n        setAuthenticated(false);\n      }\n    };\n    fetchAuthenticationStatus();\n  }, []);\n\n  useEffect(() => {\n    const data = async () => {\n      try {\n        const res = await axios.get('http://localhost:3000/api/survey/all')\n        setSurvayData(res.data)\n      }catch (e) {\n        console.log(e)\n      }\n    }\n    data()\n  }, []);\n\n  const menuItems = (): MenuItem[] => {\n    if (authenticated === null || authenticated === false) {\n      return [\n        {\n          name: 'Overview',\n        },\n        {\n          name: 'Sign In',\n          href: `${locale}/auth/sign-in`,\n          icon: <PiBriefcaseDuotone />,\n        },\n        {\n          name: 'Sign Up',\n          href: `${locale}/auth/sign-up`,\n          icon: <PiBriefcaseDuotone />,\n        }\n      ];\n    } else {\n      return [\n        {\n          name: 'Overview',\n        },\n        ...survayData.map(el => ({\n          name: `${el.survay_id}/Survey`,\n          href: `${locale}/${el.survay_id}/survey/`,\n          icon: <PiFolderUserDuotone/>,\n        })),\n        {\n          name: 'Sign Out',\n          onClick: async () => {\n            try {\n              await signOut({ redirect: false });\n              window.location.href = '/';\n            } catch (error) {\n\n            }\n          },\n          icon: <PiSignOutBold />,\n        }\n      ];\n    }\n  };\n  const pathname = usePathname();\n\n  return (\n    <aside\n      className={cn(\n        \"fixed bottom-0 start-0 z-50 h-full w-[270px] border-e-2 border-gray-100 bg-gray 2xl:w-72 dark:bg-gray-100/50\",\n        className\n      )}\n    >\n      <div className=\"sticky top-0 z-40 bg-gray-0/10 px-6 pb-5 pt-5 2xl:px-8 2xl:pt-6 dark:bg-gray-100/5\">\n        <Link\n          href={\"/\"}\n          aria-label=\"Site Logo\"\n          className=\"text-gray-800 hover:text-gray-900\"\n        >\n          <Image alt=\"logo-img\" src={Logo} width={130}/>\n        </Link>\n      </div>\n\n      <SimpleBar className=\"h-[calc(100%-80px)]\">\n        <div className=\"mt-4 pb-3 3xl:mt-6\">\n          {menuItems().map((item, index) => {\n            const isActive = pathname === (item?.href as string);\n            const pathnameExistInDropdowns: any = item?.dropdownItems?.filter(\n              (dropdownItem) => dropdownItem.href === pathname\n            );\n            const isDropdownOpen = Boolean(pathnameExistInDropdowns?.length);\n\n            return (\n              <Fragment key={item.name + \"-\" + index}>\n                {item?.href ? (\n                  <>\n                    {item?.dropdownItems ? (\n                      <Collapse\n                        defaultOpen={isDropdownOpen}\n                        header={({ open, toggle }) => (\n                          <div\n                            onClick={toggle}\n                            className={cn(\n                              \"group relative mx-3 flex cursor-pointer items-center justify-between rounded-md px-3 py-2 font-medium lg:my-1 2xl:mx-5 2xl:my-2\",\n                              isDropdownOpen\n                                ? \"before:top-2/5 text-primary before:absolute before:-start-3 before:block before:h-4/5 before:w-1 before:rounded-ee-md before:rounded-se-md before:bg-primary 2xl:before:-start-5\"\n                                : \"text-gray-700 transition-colors duration-200 hover:bg-gray-100 dark:text-gray-700/90 dark:hover:text-gray-700\"\n                            )}\n                          >\n                            <span className=\"flex items-center\">\n                              {item?.icon && (\n                                <span\n                                  className={cn(\n                                    \"me-2 inline-flex h-5 w-5 items-center justify-center rounded-md [&>svg]:h-[20px] [&>svg]:w-[20px]\",\n                                    isDropdownOpen\n                                      ? \"text-primary\"\n                                      : \"text-gray-800 dark:text-gray-500 dark:group-hover:text-gray-700\"\n                                  )}\n                                >\n                                  {item?.icon}\n                                </span>\n                              )}\n                              {item.name}\n                            </span>\n\n                            <PiCaretDownBold\n                              strokeWidth={3}\n                              className={cn(\n                                \"h-3.5 w-3.5 -rotate-90 text-gray-500 transition-transform duration-200 rtl:rotate-90\",\n                                open && \"rotate-0 rtl:rotate-0\"\n                              )}\n                            />\n                          </div>\n                        )}\n                      >\n                        {item?.dropdownItems?.map((dropdownItem, index) => {\n                          const isChildActive =\n                            pathname === (dropdownItem?.href as string);\n\n                          return (\n                            <Link\n                              href={dropdownItem?.href || '#'}\n                              key={dropdownItem?.name + index}\n                              className={cn(\n                                \"mx-3.5 mb-0.5 flex items-center justify-between rounded-md px-3.5 py-2 font-medium capitalize last-of-type:mb-1 lg:last-of-type:mb-2 2xl:mx-5\",\n                                isChildActive\n                                  ? \"text-primary\"\n                                  : \"text-gray-500 transition-colors duration-200 hover:bg-gray-100 hover:text-gray-900\"\n                              )}\n                            >\n                              <div className=\"flex items-center truncate\">\n                                <span\n                                  className={cn(\n                                    \"me-[18px] ms-1 inline-flex h-1 w-1 rounded-full bg-current transition-all duration-200\",\n                                    isChildActive\n                                      ? \"bg-primary ring-[1px] ring-primary\"\n                                      : \"opacity-40\"\n                                  )}\n                                />{\" \"}\n                                <span className=\"truncate\">\n                                  {dropdownItem?.name}\n                                </span>\n                              </div>\n                            </Link>\n                          );\n                        })}\n                      </Collapse>\n                    ) : (\n                      <Link\n                        href={item?.href}\n                        locale=\"fr\"\n                        className={cn(\n                          \"group relative mx-3 my-0.5 flex items-center justify-between rounded-md px-3 py-2 font-medium capitalize lg:my-1 2xl:mx-5 2xl:my-2\",\n                          isActive\n                            ? \"before:top-2/5 text-primary before:absolute before:-start-3 before:block before:h-4/5 before:w-1 before:rounded-ee-md before:rounded-se-md before:bg-primary 2xl:before:-start-5\"\n                            : \"text-gray-700 transition-colors duration-200 hover:bg-gray-100 hover:text-gray-900 dark:text-gray-700/90\"\n                        )}\n                      >\n                        <div className=\"flex items-center truncate\">\n                          {item?.icon && (\n                            <span\n                              className={cn(\n                                \"me-2 inline-flex h-5 w-5 items-center justify-center rounded-md [&>svg]:h-[20px] [&>svg]:w-[20px]\",\n                                isActive\n                                  ? \"text-primary\"\n                                  : \"text-gray-800 dark:text-gray-500 dark:group-hover:text-gray-700\"\n                              )}\n                            >\n                              {item?.icon}\n                            </span>\n                          )}\n                          <span className=\"truncate\">{item.name}</span>\n                        </div>\n                      </Link>\n                    )}\n                  </>\n                ) : item?.onClick ? (\n                    <button\n                        onClick={item.onClick}\n                        className={cn(\n                            \"group relative mx-3 my-0.5 flex items-center justify-between rounded-md px-3 py-2 font-medium capitalize lg:my-1 2xl:mx-5 2xl:my-2\",\n                            isActive\n                                ? \"before:top-2/5 text-primary before:absolute before:-start-3 before:block before:h-4/5 before:w-1 before:rounded-ee-md before:rounded-se-md before:bg-primary 2xl:before:-start-5\"\n                                : \"text-gray-700 transition-colors duration-200 hover:bg-gray-100 hover:text-gray-900 dark:text-gray-700/90\"\n                        )}\n                    >\n                      <div className=\"flex items-center truncate\">\n                        {item?.icon && (\n                            <span\n                                className={cn(\n                                    \"me-2 inline-flex h-5 w-5 items-center justify-center rounded-md [&>svg]:h-[20px] [&>svg]:w-[20px]\",\n                                    isActive\n                                        ? \"text-primary\"\n                                        : \"text-gray-800 dark:text-gray-500 dark:group-hover:text-gray-700\"\n                                )}\n                            >\n                              {item?.icon}\n                            </span>\n                        )}\n                        <span className=\"truncate\">{item.name}</span>\n                      </div>\n                    </button>\n                ) : (\n                  <Title\n                    as=\"h6\"\n                    className={cn(\n                      \"mb-2 truncate px-6 text-xs font-normal uppercase tracking-widest text-gray-500 2xl:px-8\",\n                      index !== 0 && \"mt-6 3xl:mt-7\"\n                    )}\n                  >\n                    {item.name}\n                  </Title>\n                )}\n              </Fragment>\n            );\n          })}\n        </div>\n      </SimpleBar>\n    </aside>\n  );\n}\n
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/isomorphic-starter-template/src/layouts/hydrogen/sidebar.tsx b/isomorphic-starter-template/src/layouts/hydrogen/sidebar.tsx
+--- a/isomorphic-starter-template/src/layouts/hydrogen/sidebar.tsx	
++++ b/isomorphic-starter-template/src/layouts/hydrogen/sidebar.tsx	
+@@ -71,21 +71,43 @@
+   }, []);
+ 
+   const menuItems = (): MenuItem[] => {
+-    if (authenticated === null || authenticated === false) {
++    if (authenticated !== null || authenticated === false) {
++      // return [
++      //   {
++      //     name: 'Overview',
++      //   },
++      //   {
++      //     name: 'Sign In',
++      //     href: `${locale}/auth/sign-in`,
++      //     icon: <PiBriefcaseDuotone />,
++      //   },
++      //   {
++      //     name: 'Sign Up',
++      //     href: `${locale}/auth/sign-up`,
++      //     icon: <PiBriefcaseDuotone />,
++      //   }
++      // ];
+       return [
+         {
+           name: 'Overview',
+         },
+-        {
+-          name: 'Sign In',
+-          href: `${locale}/auth/sign-in`,
+-          icon: <PiBriefcaseDuotone />,
+-        },
+-        {
+-          name: 'Sign Up',
+-          href: `${locale}/auth/sign-up`,
+-          icon: <PiBriefcaseDuotone />,
+-        }
++        ...survayData.map(el => ({
++          name: `${el.survay_id}/Survey`,
++          href: `/${locale}/${el.survay_id}/survey/`,
++          icon: <PiFolderUserDuotone/>,
++        })),
++        // {
++        //   name: 'Sign Out',
++        //   onClick: async () => {
++        //     try {
++        //       await signOut({ redirect: false });
++        //       window.location.href = '/';
++        //     } catch (error) {
++        //
++        //     }
++        //   },
++        //   icon: <PiSignOutBold />,
++        // }
+       ];
+     } else {
+       return [
+@@ -94,21 +116,21 @@
+         },
+         ...survayData.map(el => ({
+           name: `${el.survay_id}/Survey`,
+-          href: `${locale}/${el.survay_id}/survey/`,
++          href: `/${locale}/${el.survay_id}/survey/`,
+           icon: <PiFolderUserDuotone/>,
+         })),
+-        {
+-          name: 'Sign Out',
+-          onClick: async () => {
+-            try {
+-              await signOut({ redirect: false });
+-              window.location.href = '/';
+-            } catch (error) {
+-
+-            }
+-          },
+-          icon: <PiSignOutBold />,
+-        }
++        // {
++        //   name: 'Sign Out',
++        //   onClick: async () => {
++        //     try {
++        //       await signOut({ redirect: false });
++        //       window.location.href = '/';
++        //     } catch (error) {
++        //
++        //     }
++        //   },
++        //   icon: <PiSignOutBold />,
++        // }
+       ];
+     }
+   };
+Index: isomorphic-starter-template/src/app/[locale]/shared/profile-survey/profile-survey.tsx
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.BaseRevisionTextPatchEP
+<+>import React, { FC, useEffect, useState } from 'react';\nimport { Checkbox, Input } from \"rizzui\";\nimport RadioType from \"@/app/[locale]/shared/radio/radio-type\";\nimport axios from \"axios\";\nimport { useSession } from \"next-auth/react\";\nimport { Radio as RadioButton } from \"rizzui\";\n\ninterface AnswerProps {\n    answer_text: string,\n    answer_id: number,\n    question_id: number,\n    user_id: number\n}\n\ninterface OptionsProps {\n    option_id: number,\n    option_text: string,\n    question_id: number\n}\n\ninterface QueProps {\n    question_id: number,\n    question_text: string,\n    answer_type: string,\n    related_topic_id: number,\n    answers: AnswerProps[],\n    options: OptionsProps[]\n}\n\ninterface Data {\n    el: QueProps\n}\n\nconst ProfileSurvay: FC<Data> = ({ el }) => {\n    const { data: session, status } = useSession();\n\n\n    const [addAnswer, setAddAnswer] = useState<boolean | string>('')\n    const [addAnswerMul, setAddAnswerMul] = useState<boolean | string>('')\n    const user = session?.user as { id?: number }; // Explicitly specify the type of session?.user\n    const userId = user?.id ?? -1;\n    \n    useEffect(() => {\n        const addAnswerToSurvey = async () => {\n            if (typeof addAnswer === 'string' && addAnswer.trim() === '') return;\n            try {\n                const res = await axios.put('http://localhost:3000/api/survey/answer/input', {\n                    answer_text: addAnswer,\n                    question_id: el.question_id,\n                    answerid: el.answers[0] ? el.answers[0].answer_id : -1,\n                    user_id: userId,\n                })\n                console.log(res)\n            } catch (e) {\n                console.log(e)\n            }\n        }\n        addAnswerToSurvey()\n    }, [addAnswer, el.answers, el.question_id, userId]);\n\n        const handleCheckboxChange = async (qid: number, ansid: number, text: string | string[] | boolean, option_id: number) => {\n            console.log(text)\n\n            const userId = (session?.user as { id?: number })?.id;\n            if (userId !== undefined) {\n                try {\n                    const res = await axios.put('http://localhost:3000/api/survey/answer/multiple', {\n                        answer_text: text,\n                        question_id: qid,\n                        answerid: ansid,\n                        user_id: userId,\n                        option_id: option_id\n                    });\n                    console.log(res);\n                } catch (e) {\n                    console.log(e);\n                }\n            } else {\n                console.log(\"User ID is undefined\");\n            }\n        };\n\n\n        return (\n        <div>\n            <p className='text-2xl text-black m-[5px_0px]'>{el.question_text}</p>\n            {el.answer_type === 'text_input' && (\n                <>\n                    <Input onChange={(e) => setAddAnswer(e.target.value)} />\n                </>\n            )}\n            {(el.answer_type === 'single_choice' || el.answer_type === 'matrix') && (\n                <>\n                    <RadioType data={el} />\n                </>\n            )}\n            {/*<div className='flex'>*/}\n            {/*    {el.answer_type === 'matrix' || el.answer_type === 'multiple_choice' && (*/}\n            {/*        <>*/}\n            {/*            {el.options?.map((prop, index) => (*/}\n            {/*                <div key={index} className='flex items-center'>*/}\n            {/*                   <RadioButton onChange={(e) => setAddAnswer(e.target.checked)} />*/}\n            {/*                    <label> {prop.option_text_ch}|{prop.option_text_en}</label>*/}\n            {/*                </div>*/}\n            {/*            ))}*/}\n            {/*        </>*/}\n            {/*    )}*/}\n            {/*</div>*/}\n            {el.answer_type === 'multiple_choice' && (\n                <>\n                    {el.options?.map((prop, index) => (\n                        <div key={index} className='flex items-center'>\n                            <Checkbox\n                                onChange={(e) => handleCheckboxChange(el.question_id, el.answers[0] ? el.answers[0].answer_id : -1, e.target.checked === true ? prop.option_text : '', prop.option_id)}\n                                className='m-2'\n                            />\n                            <label> {prop.option_text}</label>\n                        </div>\n                    ))}\n                </>\n            )}\n        </div>\n    );\n};\n\nexport default ProfileSurvay;\n
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/isomorphic-starter-template/src/app/[locale]/shared/profile-survey/profile-survey.tsx b/isomorphic-starter-template/src/app/[locale]/shared/profile-survey/profile-survey.tsx
+--- a/isomorphic-starter-template/src/app/[locale]/shared/profile-survey/profile-survey.tsx	
++++ b/isomorphic-starter-template/src/app/[locale]/shared/profile-survey/profile-survey.tsx	
+@@ -1,9 +1,11 @@
++"use client";
+ import React, { FC, useEffect, useState } from 'react';
+ import { Checkbox, Input } from "rizzui";
+ import RadioType from "@/app/[locale]/shared/radio/radio-type";
+ import axios from "axios";
+ import { useSession } from "next-auth/react";
+ import { Radio as RadioButton } from "rizzui";
++import {useAppDispatch, useAppSelector} from "@/store/hooks";
+ 
+ interface AnswerProps {
+     answer_text: string,
+@@ -33,10 +35,10 @@
+ 
+ const ProfileSurvay: FC<Data> = ({ el }) => {
+     const { data: session, status } = useSession();
+-
+-
++    // const disputch = useAppDispatch()
++    // const {isSurveyState} = useAppSelector((state) => state.survey)
++    // console.log(isSurveyState)
+     const [addAnswer, setAddAnswer] = useState<boolean | string>('')
+-    const [addAnswerMul, setAddAnswerMul] = useState<boolean | string>('')
+     const user = session?.user as { id?: number }; // Explicitly specify the type of session?.user
+     const userId = user?.id ?? -1;
+     
+@@ -80,7 +82,6 @@
+             }
+         };
+ 
+-
+         return (
+         <div>
+             <p className='text-2xl text-black m-[5px_0px]'>{el.question_text}</p>
+@@ -94,18 +95,6 @@
+                     <RadioType data={el} />
+                 </>
+             )}
+-            {/*<div className='flex'>*/}
+-            {/*    {el.answer_type === 'matrix' || el.answer_type === 'multiple_choice' && (*/}
+-            {/*        <>*/}
+-            {/*            {el.options?.map((prop, index) => (*/}
+-            {/*                <div key={index} className='flex items-center'>*/}
+-            {/*                   <RadioButton onChange={(e) => setAddAnswer(e.target.checked)} />*/}
+-            {/*                    <label> {prop.option_text_ch}|{prop.option_text_en}</label>*/}
+-            {/*                </div>*/}
+-            {/*            ))}*/}
+-            {/*        </>*/}
+-            {/*    )}*/}
+-            {/*</div>*/}
+             {el.answer_type === 'multiple_choice' && (
+                 <>
+                     {el.options?.map((prop, index) => (
+Index: isomorphic-starter-template/src/store/hooks.ts
+===================================================================
+diff --git a/isomorphic-starter-template/src/store/hooks.ts b/isomorphic-starter-template/src/store/hooks.ts
+new file mode 100644
+--- /dev/null	
++++ b/isomorphic-starter-template/src/store/hooks.ts	
+@@ -0,0 +1,6 @@
++import { useDispatch, useSelector } from 'react-redux'
++import type { TypedUseSelectorHook } from 'react-redux'
++import type { RootState, AppDispatch } from './store'
++
++export const useAppDispatch: () => AppDispatch = useDispatch
++export const useAppSelector: TypedUseSelectorHook<RootState> = useSelector
+\ No newline at end of file

@@ -1,0 +1,18 @@
+Index: isomorphic-starter-template/src/app/api/survey/id/route.ts
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.BaseRevisionTextPatchEP
+<+>import { PrismaClient } from '@prisma/client';\nimport { NextResponse } from 'next/server';\n\nconst prisma = new PrismaClient();\n\nexport async function GET () {\n\n    \n    const lang='en';\n    const id=1;\n    console.log(lang,id);\n    \n\n    if (!lang) {\n        return NextResponse.json({ message: 'Language parameter is missing' }, { status: 400 });\n    }\n\n    try {\n        const existingSurvey = await prisma.survay.findUnique({\n            where: {\n                survay_id: id,\n            }\n        });\n\n        if (!existingSurvey) {\n            return NextResponse.json({ message: 'Survey not found' }, { status: 404 });\n        }\n        \n\n        const relatedTopicsWithQuestions = await prisma.relatedTopic.findMany({\n            where: {\n                questions: {\n                    some: {\n                        survay_id:id,\n                    },\n                },\n            },\n            include: {\n                questions: {\n                    where: {\n                        survay_id: id,\n                    },\n                    include:{\n                        answers: true,\n                        options: {\n                            include: {}\n                        }\n                    }\n                }\n            }\n        });\n\n        // Modify the text and options based on the language preference\n        const modifiedRelatedTopicsWithQuestions = relatedTopicsWithQuestions.map(topic => {\n            const modifiedQuestions = topic.questions.map(question => {\n                const modifiedOptions = question.options.map(option => ({\n                    option_id: option.option_id,\n                    isChecked: option.isChecked,\n                    option_text: lang === 'en' ? option.option_text_en : option.option_text_ch\n                }));\n\n                return {\n                    question_id: question.question_id,\n                    question_text: lang === 'en' ? question.question_text_en : question.question_text_ch,\n                    answer_type: question.answer_type,\n                    related_topic_id: question.related_topic_id,\n                    survay_id: question.survay_id,\n                    answers: question.answers,\n                    options: modifiedOptions\n                };\n            });\n\n            return {\n                topic_id: topic.topic_id,\n                topic_name: lang === 'en' ? topic.topic_name_en : topic.topic_name_ch,\n                questions: modifiedQuestions\n            };\n        });\n\n        return NextResponse.json(modifiedRelatedTopicsWithQuestions);\n    } catch (error) {\n        console.error('Error fetching related topics:', error);\n        return NextResponse.json({ message: 'Something went wrong..' }, { status: 500 });\n    }\n}
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/isomorphic-starter-template/src/app/api/survey/id/route.ts b/isomorphic-starter-template/src/app/api/survey/id/route.ts
+--- a/isomorphic-starter-template/src/app/api/survey/id/route.ts	
++++ b/isomorphic-starter-template/src/app/api/survey/id/route.ts	
+@@ -5,7 +5,6 @@
+ 
+ export async function GET () {
+ 
+-    
+     const lang='en';
+     const id=1;
+     console.log(lang,id);

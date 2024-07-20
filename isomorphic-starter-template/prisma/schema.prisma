@@ -1,0 +1,81 @@
+datasource db {
+  provider = "postgresql"
+  url      = "postgres://postgres:sfhdkowurtbckkfhd@chatedudb.c5umu0ic4o80.eu-north-1.rds.amazonaws.com/chatedudb"
+}
+
+generator client {
+  provider      = "prisma-client-js"
+  binaryTargets = ["native", "rhel-openssl-1.0.x"]
+}
+
+model User {
+  id        Int      @id @default(autoincrement())
+  email     String   @unique
+  username  String   @unique
+  role      String   @default("user")
+  password  String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  answers   Answer[]
+  files     File[]
+}
+
+model Question {
+  question_id      Int          @id @default(autoincrement())
+  question_text_en String
+  question_text_ch String
+  answer_type      String
+  related_topic_id Int
+  survay_id        Int
+  answers          Answer[]
+  options          Option[]
+  related_topic    RelatedTopic @relation(fields: [related_topic_id], references: [topic_id], onDelete: Cascade)
+  survay           Survay       @relation(fields: [survay_id], references: [survay_id])
+}
+
+model RelatedTopic {
+  topic_id      Int        @id @default(autoincrement())
+  topic_name_en String     @unique
+  topic_name_ch String
+  questions     Question[]
+  survay_id     Int // Поле для хранения ID опроса
+  survay        Survay     @relation(fields: [survay_id], references: [survay_id]) // Связь с опросом
+}
+
+model Answer {
+  answer_text Json
+  answer_id   Int      @id @default(autoincrement())
+  question_id Int
+  user_id     Int
+  file_id     Int?
+  file        File?    @relation(fields: [file_id], references: [file_id])
+  question    Question @relation(fields: [question_id], references: [question_id])
+  user        User     @relation(fields: [user_id], references: [id])
+}
+
+model Survay {
+  survay_id     Int            @id @default(autoincrement())
+  name          String         @unique
+  file          File?
+  questions     Question[]
+  relatedTopics RelatedTopic[] // Связь с темами
+}
+
+model Option {
+  option_id      Int      @id @default(autoincrement())
+  isChecked      Boolean  @default(false)
+  option_text_en String
+  option_text_ch String
+  question_id    Int
+  question       Question @relation(fields: [question_id], references: [question_id], onDelete: Cascade)
+}
+
+model File {
+  file_id   Int      @id @default(autoincrement())
+  file      String   @unique
+  survay_id Int      @unique
+  user_id   Int
+  answers   Answer[]
+  survay    Survay   @relation(fields: [survay_id], references: [survay_id])
+  user      User     @relation(fields: [user_id], references: [id])
+}
